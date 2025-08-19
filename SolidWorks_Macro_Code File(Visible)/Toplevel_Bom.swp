@@ -1,0 +1,69 @@
+Option Explicit
+
+Sub InsertBOM_TopLevelOnly()
+
+    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swDraw As SldWorks.DrawingDoc
+    Dim swView As SldWorks.View
+    Dim swBOMTable As SldWorks.BomTableAnnotation
+
+    Dim configName As String
+    Dim templatePath As String
+
+    Set swApp = Application.SldWorks
+    Set swModel = swApp.ActiveDoc
+
+    If swModel Is Nothing Then
+        MsgBox "No document is open."
+        Exit Sub
+    End If
+
+    If swModel.GetType <> swDocDRAWING Then
+        MsgBox "Active document is not a drawing."
+        Exit Sub
+    End If
+
+    Set swDraw = swModel
+    Set swView = swDraw.GetFirstView
+    Set swView = swView.GetNextView ' Skip sheet format view
+
+    If swView Is Nothing Then
+        MsgBox "No model view found."
+        Exit Sub
+    End If
+
+    If swView.ReferencedDocument Is Nothing Then
+        MsgBox "No model linked in the view."
+        Exit Sub
+    End If
+
+    configName = "EPP"
+    templatePath = "C:\Users\varun.ku\Documents\Templates\BOMs\Top Level BOM.sldbomtbt"
+
+    On Error GoTo InsertFailed
+
+   ' Here is the BOM type change
+Set swBOMTable = swView.InsertBomTable4( _
+    False, 0.2, 0.2, _
+    swBOMConfigurationAnchorType_e.swBOMConfigurationAnchor_TopLeft, _
+    swBomType_e.swBomType_TopLevelOnly, _
+    configName, _
+    templatePath, _
+    False, 0, False)
+
+
+    If swBOMTable Is Nothing Then
+        MsgBox "Failed to create BOM table."
+    Else
+        MsgBox "BOM inserted successfully with Top-Level Only type!"
+    End If
+
+    Exit Sub
+
+InsertFailed:
+    MsgBox "Error inserting BOM: " & Err.Description
+
+End Sub
+
+
