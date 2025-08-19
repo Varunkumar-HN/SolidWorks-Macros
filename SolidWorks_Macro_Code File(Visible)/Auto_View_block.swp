@@ -1,0 +1,162 @@
+Option Explicit
+
+Sub main()
+    Dim swApp As SldWorks.SldWorks
+    Dim swDraw As SldWorks.DrawingDoc
+    Dim swSheet As SldWorks.Sheet
+    Dim swModelDoc As SldWorks.ModelDoc2
+    Dim modelPath As String
+    Dim sheetWidth As Double, sheetHeight As Double
+    Dim xSpacing As Double, ySpacing As Double
+    Dim xCenter As Double, yCenter As Double
+    Dim frontView As SldWorks.View
+    Dim topView As SldWorks.View
+    Dim rightView As SldWorks.View
+    Dim isoView As SldWorks.View
+    Dim boolstatus As Boolean
+    Dim myBlockDefinition As SldWorks.SketchBlockDefinition
+    Dim labelXOffset As Double, labelYOffset As Double
+
+    ' Connect to SolidWorks
+    Set swApp = Application.SldWorks
+    Set swDraw = swApp.ActiveDoc
+
+    ' Check active document type
+    If swDraw Is Nothing Or swDraw.GetType <> swDocDRAWING Then
+        MsgBox "Please open a drawing first.", vbExclamation
+        Exit Sub
+    End If
+
+    ' Get current sheet size
+    Set swSheet = swDraw.GetCurrentSheet
+    swSheet.GetSize sheetWidth, sheetHeight
+
+    ' Get first real model view to find referenced model doc
+    Dim swModelView As SldWorks.View
+    Set swModelView = swDraw.GetFirstView
+    Set swModelView = swModelView.GetNextView ' skip sheet format view
+
+    If swModelView Is Nothing Then
+        MsgBox "No model view found in the drawing.", vbExclamation
+        Exit Sub
+    End If
+
+    ' Get referenced model document and path
+    Set swModelDoc = swModelView.ReferencedDocument
+    If swModelDoc Is Nothing Then
+        MsgBox "Referenced model not loaded.", vbExclamation
+        Exit Sub
+    End If
+
+    modelPath = swModelDoc.GetPathName
+    If modelPath = "" Then
+        MsgBox "Model path not found.", vbExclamation
+        Exit Sub
+    End If
+
+    ' Set spacing (meters)
+    xSpacing = 0.15
+    ySpacing = 0.15
+
+    ' Center position for Front view
+    xCenter = sheetWidth / 2
+    yCenter = sheetHeight / 2
+
+    ' Create Front view in center
+    Set frontView = swDraw.CreateDrawViewFromModelView3(modelPath, "*Front", xCenter, yCenter, 0)
+    If frontView Is Nothing Then
+        MsgBox "Failed to create Front view.", vbExclamation
+        Exit Sub
+    End If
+
+    ' Create Top view above Front (same X, Y + vertical spacing)
+    Set topView = swDraw.CreateDrawViewFromModelView3(modelPath, "*Top", xCenter, yCenter + ySpacing, 0)
+    If topView Is Nothing Then
+        MsgBox "Failed to create Top view.", vbExclamation
+    End If
+
+    ' Create Right view to right of Front (X + horizontal spacing, same Y)
+    Set rightView = swDraw.CreateDrawViewFromModelView3(modelPath, "*Right", xCenter + xSpacing, yCenter, 0)
+    If rightView Is Nothing Then
+        MsgBox "Failed to create Right view.", vbExclamation
+    End If
+
+    ' Create Isometric view top-right corner (X + spacing, Y + spacing)
+    Set isoView = swDraw.CreateDrawViewFromModelView3(modelPath, "*Isometric", xCenter + xSpacing, yCenter + ySpacing, 0)
+    If isoView Is Nothing Then
+        MsgBox "Failed to create Isometric view.", vbExclamation
+    End If
+
+    ' =============== Insert Labels ===============
+
+    ' Offsets for labels relative to views (adjust as needed)
+    labelXOffset = 0.02
+    labelYOffset = -0.02
+
+    ' Insert Front View Label near Front view
+    boolstatus = swDraw.ActivateView(frontView.Name)
+    Set myBlockDefinition = swDraw.SketchManager.MakeSketchBlockFromFile( _
+        Nothing, "C:\PDM\ArrayVault1\Standards\Templates\Blocks\Front View Label.SLDBLK", _
+        False, 1, 0)
+    If Not myBlockDefinition Is Nothing Then
+        Call InsertBlockAtView(swDraw, frontView, myBlockDefinition, labelXOffset, labelYOffset)
+    End If
+
+    ' Insert Top View Label near Top view
+    If Not topView Is Nothing Then
+        boolstatus = swDraw.ActivateView(topView.Name)
+        Set myBlockDefinition = swDraw.SketchManager.MakeSketchBlockFromFile( _
+            Nothing, "C:\PDM\ArrayVault1\Standards\Templates\Blocks\Top View Label.SLDBLK", _
+            False, 1, 0)
+        If Not myBlockDefinition Is Nothing Then
+            Call InsertBlockAtView(swDraw, topView, myBlockDefinition, labelXOffset, labelYOffset)
+        End If
+    End If
+
+    ' Insert Side View Label near Right view
+    If Not rightView Is Nothing Then
+        boolstatus = swDraw.ActivateView(rightView.Name)
+        Set myBlockDefinition = swDraw.SketchManager.MakeSketchBlockFromFile( _
+            Nothing, "C:\PDM\ArrayVault1\Standards\Templates\Blocks\Side View Label.SLDBLK", _
+            False, 1, 0)
+        If Not myBlockDefinition Is Nothing Then
+            Call InsertBlockAtView(swDraw, rightView, myBlockDefinition, labelXOffset, labelYOffset)
+        End If
+    End If
+
+    ' Insert Isometric View Label near Iso view
+    If Not isoView Is Nothing Then
+        boolstatus = swDraw.ActivateView(isoView.Name)
+        Set myBlockDefinition = swDraw.SketchManager.MakeSketchBlockFromFile( _
+            Nothing, "C:\PDM\ArrayVault1\Standards\Templates\Blocks\Isometric View Label.SLDBLK", _
+            False, 1, 0)
+        If Not myBlockDefinition Is Nothing Then
+            Call InsertBlockAtView(swDraw, isoView, myBlockDefinition, labelXOffset, labelYOffset)
+        End If
+    End If
+
+    MsgBox "Views and labels created successfully.", vbInformation
+
+End Sub
+
+
+' Helper sub to insert the block near the given view with offsets
+Sub InsertBlockAtView(swDraw As SldWorks.DrawingDoc, swView As SldWorks.View, _
+    myBlockDefinition As SldWorks.SketchBlockDefinition, xOffset As Double, yOffset As Double)
+
+    Dim swSketchMgr As SldWorks.SketchManager
+    Dim swBlock As SldWorks.SketchBlock
+    Dim xPos As Double, yPos As Double
+
+    Set swSketchMgr = swDraw.SketchManager
+
+    ' Calculate position near view - use view position + offsets
+    xPos = swView.Position(0) + xOffset
+    yPos = swView.Position(1) + yOffset
+
+    ' Insert the block instance at position
+    Set swBlock = swSketchMgr.InsertSketchBlockInstance3(myBlockDefinition, xPos, yPos, 0, 1, 1, 1)
+
+End Sub
+
+
