@@ -1,0 +1,88 @@
+Option Explicit
+
+Sub main()
+    Dim swApp As SldWorks.SldWorks
+    Dim swDraw As SldWorks.DrawingDoc
+    Dim swSheet As SldWorks.Sheet
+    Dim swView As SldWorks.View
+    Dim swModelView As SldWorks.View
+    Dim swModelDoc As SldWorks.ModelDoc2
+    Dim modelPath As String
+    Dim sheetWidth As Double, sheetHeight As Double
+    Dim xSpacing As Double, ySpacing As Double
+    Dim xCenter As Double, yCenter As Double
+    Dim frontView As SldWorks.View
+    Dim topView As SldWorks.View
+    Dim rightView As SldWorks.View
+    Dim isoView As SldWorks.View
+
+    Set swApp = Application.SldWorks
+    Set swDraw = swApp.ActiveDoc
+
+    If swDraw Is Nothing Or swDraw.GetType <> swDocDRAWING Then
+        MsgBox "Please open a drawing first.", vbExclamation
+        Exit Sub
+    End If
+
+    ' Get current sheet size
+    Set swSheet = swDraw.GetCurrentSheet
+    swSheet.GetSize sheetWidth, sheetHeight
+
+    ' Get first real model view (skip sheet format)
+    Set swModelView = swDraw.GetFirstView
+    Set swModelView = swModelView.GetNextView
+
+    If swModelView Is Nothing Then
+        MsgBox "No model view found in the drawing.", vbExclamation
+        Exit Sub
+    End If
+
+    ' Get referenced model document
+    Set swModelDoc = swModelView.ReferencedDocument
+    If swModelDoc Is Nothing Then
+        MsgBox "Referenced model not loaded.", vbExclamation
+        Exit Sub
+    End If
+
+    modelPath = swModelDoc.GetPathName
+    If modelPath = "" Then
+        MsgBox "Model path not found.", vbExclamation
+        Exit Sub
+    End If
+
+    ' Spacing between views (meters)
+    xSpacing = 0.15 ' horizontal spacing (~15cm)
+    ySpacing = 0.15 ' vertical spacing (~15cm)
+
+    ' Center position for Front view
+    xCenter = sheetWidth / 2
+    yCenter = sheetHeight / 2
+
+    ' Create Front view in center
+    Set frontView = swDraw.CreateDrawViewFromModelView3(modelPath, "*Front", xCenter, yCenter, 0)
+    If frontView Is Nothing Then
+        MsgBox "Failed to create Front view.", vbExclamation
+        Exit Sub
+    End If
+
+    ' Create Top view above Front (same X, Y + vertical spacing)
+    Set topView = swDraw.CreateDrawViewFromModelView3(modelPath, "*Top", xCenter, yCenter + ySpacing, 0)
+    If topView Is Nothing Then
+        MsgBox "Failed to create Top view.", vbExclamation
+    End If
+
+    ' Create Right view to the right of Front (X + horizontal spacing, same Y)
+    Set rightView = swDraw.CreateDrawViewFromModelView3(modelPath, "*Right", xCenter + xSpacing, yCenter, 0)
+    If rightView Is Nothing Then
+        MsgBox "Failed to create Right view.", vbExclamation
+    End If
+
+    ' Create Isometric view top-right corner (X + spacing, Y + spacing)
+    Set isoView = swDraw.CreateDrawViewFromModelView3(modelPath, "*Isometric", xCenter + xSpacing, yCenter + ySpacing, 0)
+    If isoView Is Nothing Then
+        MsgBox "Failed to create Isometric view.", vbExclamation
+    End If
+
+    MsgBox "Views created: Front(center), Top(above), Right(right), Isometric(top-right).", vbInformation
+End Sub
+
