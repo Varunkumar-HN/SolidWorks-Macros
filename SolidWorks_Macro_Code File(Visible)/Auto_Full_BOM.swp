@@ -1,0 +1,97 @@
+Option Explicit
+
+Sub InsertBOM_MultipleSheets()
+
+    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swDraw As SldWorks.DrawingDoc
+    Dim swView As SldWorks.View
+    Dim swBOMTable As SldWorks.BomTableAnnotation
+    Dim boolStatus As Boolean
+    Dim sheetNames As Variant
+    Dim i As Integer
+
+    Set swApp = Application.SldWorks
+    Set swModel = swApp.ActiveDoc
+
+    If swModel Is Nothing Or swModel.GetType <> swDocDRAWING Then
+        MsgBox "Please open a drawing document."
+        Exit Sub
+    End If
+
+    Set swDraw = swModel
+    sheetNames = swDraw.GetSheetNames
+
+    ' === Sheet 1 - Top Level Only ===
+    If UBound(sheetNames) >= 0 Then
+        boolStatus = swDraw.ActivateSheet(sheetNames(0))
+        Set swView = swDraw.GetFirstView
+        Set swView = swView.GetNextView
+
+        If Not swView Is Nothing Then
+            Set swBOMTable = swView.InsertBomTable4( _
+                False, 0.2, 0.2, _
+                swBOMConfigurationAnchorType_e.swBOMConfigurationAnchor_TopLeft, _
+                swBomType_e.swBomType_TopLevelOnly, _
+                "EPP", _
+                "C:\PDM\ArrayVault1\Standards\Templates\BOMs\Top Level BOM.sldbomtbt", _
+                False, 0, False)
+        End If
+    End If
+
+    ' === Sheet 2 - Parts Only ===
+    If UBound(sheetNames) >= 1 Then
+        boolStatus = swDraw.ActivateSheet(sheetNames(1))
+        Set swView = swDraw.GetFirstView
+        Set swView = swView.GetNextView
+
+        If Not swView Is Nothing Then
+            Set swBOMTable = swView.InsertBomTable4( _
+                False, 0.2, 0.2, _
+                swBOMConfigurationAnchorType_e.swBOMConfigurationAnchor_TopLeft, _
+                swBomType_e.swBomType_PartsOnly, _
+                "Default", _
+                "C:\PDM\ArrayVault1\Standards\Templates\BOMs\Product Table - POG.sldbomtbt", _
+                False, 0, False)
+        End If
+    End If
+
+    ' === Sheet 3 - Indented ===
+    If UBound(sheetNames) >= 2 Then
+        boolStatus = swDraw.ActivateSheet(sheetNames(2))
+        Set swView = swDraw.GetFirstView
+        Set swView = swView.GetNextView
+
+        If Not swView Is Nothing Then
+            Set swBOMTable = swView.InsertBomTable4( _
+                False, 0.2, 0.2, _
+                swBOMConfigurationAnchorType_e.swBOMConfigurationAnchor_TopLeft, _
+                swBomType_e.swBomType_Indented, _
+                "EPP", _
+                "C:\PDM\ArrayVault1\Standards\Templates\BOMs\Page 3 BOM.sldbomtbt", _
+                False, 0, False)
+        End If
+    End If
+
+    ' === Remaining Sheets - Use same as Sheet 3 ===
+    For i = 3 To UBound(sheetNames)
+        boolStatus = swDraw.ActivateSheet(sheetNames(i))
+        Set swView = swDraw.GetFirstView
+        Set swView = swView.GetNextView
+
+        If Not swView Is Nothing Then
+            Set swBOMTable = swView.InsertBomTable4( _
+                False, 0.2, 0.2, _
+                swBOMConfigurationAnchorType_e.swBOMConfigurationAnchor_TopLeft, _
+                swBomType_e.swBomType_Indented, _
+                "", _
+                "C:\PDM\ArrayVault1\Standards\Templates\BOMs\Page 3 BOM.sldbomtbt", _
+                False, 0, False)
+        End If
+    Next i
+
+    MsgBox "? BOMs inserted for all sheets!"
+
+End Sub
+
+
