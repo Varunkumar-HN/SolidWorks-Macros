@@ -1,0 +1,97 @@
+Option Explicit
+
+Sub main()
+    Dim swApp As Object
+    Dim swModel As Object
+    Dim swDraw As Object
+    Dim swSheet As Object
+    Dim swView As Object
+    Dim boolstatus As Boolean
+    Dim vNotes As Variant
+    Dim autoBalloonOptions As Object
+    Dim sheetNames As Variant
+    Dim i As Integer, j As Integer
+    Dim views As Variant
+    
+    Set swApp = Application.SldWorks
+    Set swModel = swApp.ActiveDoc
+    
+    If swModel Is Nothing Then
+        MsgBox "No active document.", vbExclamation
+        Exit Sub
+    End If
+    
+    If swModel.GetType <> 3 Then ' 3 = Drawing document
+        MsgBox "Please run this macro on a drawing document.", vbExclamation
+        Exit Sub
+    End If
+    
+    Set swDraw = swModel
+    
+    ' Define sheets to process
+    sheetNames = Array("Sheet1")
+    
+    ' Create AutoBalloonOptions object and set properties
+    Set autoBalloonOptions = swModel.CreateAutoBalloonOptions()
+    With autoBalloonOptions
+        .Layout = 1 ' Circular layout
+        .ReverseDirection = False
+        .IgnoreMultiple = True
+        .InsertMagneticLine = True
+        .LeaderAttachmentToFaces = False
+        .Style = 1 ' Quantity style
+        .Size = 2
+        .EditBalloonOption = 1
+        .EditBalloons = 1
+        .UpperTextContent = 1
+        .UpperText = ""
+        .Layername = ""
+    End With
+    
+    ' Loop through sheets
+    For i = LBound(sheetNames) To UBound(sheetNames)
+        boolstatus = swModel.ActivateSheet(sheetNames(i))
+        If Not boolstatus Then
+            MsgBox "Could not activate sheet: " & sheetNames(i), vbExclamation
+            GoTo NextSheet
+        End If
+        
+        Set swSheet = swDraw.GetCurrentSheet
+        
+        ' Get all views on this sheet
+        views = swSheet.GetViews
+        
+        If Not IsEmpty(views) Then
+            For j = LBound(views) To UBound(views)
+                Set swView = views(j)
+                ' Skip the sheet view (usually first view), only balloon detail views
+                If Not swView Is Nothing Then
+                    ' Skip the sheet view itself (name = sheet name)
+                    If swView.Name <> sheetNames(i) Then
+                        boolstatus = swModel.ActivateView(swView.Name)
+                        If boolstatus Then
+                            boolstatus = swModel.Extension.SelectByID2(swView.Name, "DRAWINGVIEW", 0, 0, 0, False, 0, Nothing, 0)
+                            If boolstatus Then
+                                vNotes = swModel.AutoBalloon5(autoBalloonOptions)
+                                swModel.ClearSelection2 True
+                            Else
+                                MsgBox "Could not select view: " & swView.Name, vbExclamation
+                            End If
+                        Else
+                            MsgBox "Could not activate view: " & swView.Name, vbExclamation
+                        End If
+                    End If
+                End If
+            Next j
+        Else
+            MsgBox "No views found on sheet: " & sheetNames(i), vbInformation
+        End If
+        
+NextSheet:
+    Next i
+    
+    MsgBox "Auto balloon generation finished.", vbInformation
+End Sub
+
+
+
