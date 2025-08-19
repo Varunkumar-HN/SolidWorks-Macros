@@ -28,7 +28,8 @@ This macro automatically applies balloons to all components on Sheet 1 of the dr
 This macro creates a Top-Level Only BOM on the current sheet, using a designated template path for formatting.
 
 7. Auto_View.swp
-This macro inserts standard drawing views (such as front, top, right, isometric) into the current sheet, based on the model reference and configured layout.
+This macro inserts standard drawing views (such as front, top, right, isometric) into the current sheet, based on the model reference and configured layout. (based on current view)
 
 8. Auto_View_block.swp
-This macro inserts both standard drawing views and predefined blocks or title blocks into the current sheet, using a specified template or block path.
+
+This macro inserts both standard drawing views and predefined blocks or title blocks into the current sheet, using a specified template or block path. (based on current view)
