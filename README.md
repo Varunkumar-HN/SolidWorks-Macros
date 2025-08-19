@@ -13,6 +13,6 @@ Sheet1_Auto_balloon.swp focuses specifically on Sheet 1, applying balloons to al
 
 Toplevel_Bom.swp generates a Top-Level Only BOM on the active sheet. It filters out subcomponents, listing only top-level items using a specified BOM formatting template.
 
-Auto_View.swp automates the insertion of standard drawing views such as front, top, right, and isometric, based on the model’s reference. It follows a predefined layout to ensure consistent view positioning.
+Auto_View.swp automates the insertion of standard drawing views such as front, top, right, and isometric, based on the model’s reference. It follows a predefined layout to ensure consistent view positioning. (based on current view)
 
-Finally, Auto_View_block.swp combines view creation and block insertion into a single operation, making it efficient for setting up new drawing sheets with standard views and title blocks.
+Finally, Auto_View_block.swp combines view creation and block insertion into a single operation, making it efficient for setting up new drawing sheets with standard views and title blocks. (based on current view)
