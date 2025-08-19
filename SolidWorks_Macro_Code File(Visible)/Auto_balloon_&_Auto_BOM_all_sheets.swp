@@ -1,0 +1,162 @@
+Option Explicit
+
+Sub InsertBOMandBalloon_AllSheets()
+    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swDraw As SldWorks.DrawingDoc
+    Dim swSheet As SldWorks.Sheet
+    Dim swView As SldWorks.View
+    Dim swBOM As SldWorks.BomTableAnnotation
+    Dim opts As SldWorks.AutoBalloonOptions
+    Dim sheetNames() As String
+    Dim i As Integer
+    Dim sheetName As String
+
+    Dim bomTypeValue As Long
+    Dim bomX As Double, bomY As Double
+    Dim bomTemplatePath As String
+    Dim configName As String
+
+    Set swApp = Application.SldWorks
+    Set swModel = swApp.ActiveDoc
+
+    If swModel Is Nothing Or swModel.GetType <> swDocDRAWING Then
+        MsgBox "Please open a drawing first.", vbExclamation
+        Exit Sub
+    End If
+
+    Set swDraw = swModel
+    sheetNames = swDraw.GetSheetNames
+
+    For i = 0 To UBound(sheetNames)
+        sheetName = sheetNames(i)
+        swDraw.ActivateSheet sheetName
+        Set swSheet = swDraw.GetCurrentSheet
+
+        Dim currentView As SldWorks.View
+        Dim firstValidView As SldWorks.View
+        Dim selectedView As SldWorks.View
+        Dim referencedModel As SldWorks.ModelDoc2
+        Dim foundTargetView As Boolean
+
+        Set currentView = swDraw.GetFirstView
+        Set currentView = currentView.GetNextView ' Skip sheet format
+
+        If currentView Is Nothing Then
+            Debug.Print "No views found on sheet: " & sheetName
+            GoTo NextSheet
+        End If
+
+        foundTargetView = False
+        Set selectedView = Nothing
+        Set firstValidView = currentView ' Save the first valid view
+
+        ' View Selection Logic
+        Select Case i + 1
+            Case 1 ' Sheet 1: Use last view
+                Do While Not currentView Is Nothing
+                    Set selectedView = currentView
+                    Set currentView = currentView.GetNextView
+                Loop
+
+            Case 2 ' Sheet 2: Use first valid view
+                Set selectedView = firstValidView
+
+            Case Else ' Sheet 3 and after: find exploded, isometric, assembly view
+                Do While Not currentView Is Nothing
+                    Set referencedModel = currentView.ReferencedDocument
+                    If Not referencedModel Is Nothing Then
+                        If referencedModel.GetType = swDocASSEMBLY Then
+                            On Error Resume Next
+                            If currentView.IsExplodedView And IsIsometricView(currentView) Then
+                                If Err.Number = 0 Then
+                                    Set selectedView = currentView
+                                    foundTargetView = True
+                                    On Error GoTo 0
+                                    Exit Do
+                                End If
+                            End If
+                            On Error GoTo 0
+                        End If
+                    End If
+                    Set currentView = currentView.GetNextView
+                Loop
+
+                If Not foundTargetView Then
+                    Set selectedView = firstValidView
+                    Debug.Print "? No exploded isometric assembly view found on Sheet " & (i + 1) & ". Using first view."
+                Else
+                    selectedView.ExplodeView
+                    Debug.Print "? Exploded isometric assembly view used on Sheet " & (i + 1) & ": " & selectedView.Name
+                End If
+        End Select
+
+        Set swView = selectedView
+
+        ' BOM configuration
+        Select Case i + 1
+            Case 1
+                bomTypeValue = swBomType_e.swBomType_TopLevelOnly
+                bomTemplatePath = "C:\PDM\ArrayVault1\Standards\Templates\BOMs\Top Level BOM.sldbomtbt"
+                configName = "EPP"
+            Case 2
+                bomTypeValue = swBomType_e.swBomType_PartsOnly
+                bomTemplatePath = "C:\PDM\ArrayVault1\Standards\Templates\BOMs\Product Table - POG.sldbomtbt"
+                configName = ""
+            Case 3
+                bomTypeValue = swBomType_e.swBomType_Indented
+                bomTemplatePath = "C:\PDM\ArrayVault1\Standards\Templates\BOMs\Page 3 BOM.sldbomtbt"
+                configName = "EPP"
+            Case Else
+                bomTypeValue = swBomType_e.swBomType_Indented
+                bomTemplatePath = "C:\PDM\ArrayVault1\Standards\Templates\BOMs\Page 3 BOM.sldbomtbt"
+                configName = ""
+        End Select
+
+        ' Insert BOM
+        Set swBOM = swView.InsertBomTable4(False, bomX, bomY, _
+            swBOMConfigurationAnchorType_e.swBOMConfigurationAnchor_TopLeft, _
+            bomTypeValue, configName, bomTemplatePath, False, 0, False)
+
+        If swBOM Is Nothing Then
+            MsgBox "?? Failed to insert BOM on sheet: " & sheetName, vbExclamation
+            GoTo NextSheet
+        End If
+
+        ' AutoBalloon
+        Set opts = swModel.CreateAutoBalloonOptions()
+        With opts
+            .Layout = 1
+            .IgnoreMultiple = True
+            .InsertMagneticLine = True
+        End With
+
+        If swModel.Extension.SelectByID2(swView.Name, "DRAWINGVIEW", 0, 0, 0, False, 0, Nothing, 0) Then
+            swModel.AutoBalloon5 opts
+            swModel.ClearSelection2 True
+            Debug.Print "? Balloons added on sheet: " & sheetName
+        Else
+            MsgBox "?? Failed to select view on sheet: " & sheetName
+        End If
+
+NextSheet:
+    Next i
+
+    MsgBox "? Operation completed for all sheets.", vbInformation
+End Sub
+
+' Helper function to determine if a view is isometric
+Function IsIsometricView(v As SldWorks.View) As Boolean
+    Dim viewName As String
+    viewName = LCase(v.Name)
+    
+    If InStr(viewName, "iso") > 0 Or InStr(viewName, "isometric") > 0 Then
+        IsIsometricView = True
+    Else
+        IsIsometricView = False
+    End If
+End Function
+
+
+
+
