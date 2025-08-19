@@ -1,0 +1,53 @@
+Dim swApp As SldWorks.SldWorks
+Dim Part As SldWorks.ModelDoc2
+Dim boolstatus As Boolean
+Dim myBlockDefinition As SldWorks.SketchBlockDefinition
+
+Sub main()
+
+    ' Connect to SolidWorks
+    Set swApp = Application.SldWorks
+    Set Part = swApp.ActiveDoc
+    
+    If Part Is Nothing Then
+        MsgBox "No active document found. Please open a drawing."
+        Exit Sub
+    End If
+    
+    '=============================
+    ' Insert Front View Label
+    '=============================
+    boolstatus = Part.ActivateView("")
+    Set myBlockDefinition = Part.SketchManager.MakeSketchBlockFromFile( _
+        Nothing, "C:\PDM\ArrayVault1\Standards\Templates\Blocks\Front View Label.SLDBLK", _
+        False, 1, 0)
+    
+    '=============================
+    ' Insert Top View Label
+    '=============================
+    boolstatus = Part.ActivateView("Drawing View8")
+    Set myBlockDefinition = Part.SketchManager.MakeSketchBlockFromFile( _
+        Nothing, "C:\PDM\ArrayVault1\Standards\Templates\Blocks\Top View Label.SLDBLK", _
+        False, 1, 0)
+    
+    '=============================
+    ' Insert Side View Label
+    '=============================
+    boolstatus = Part.ActivateView("Drawing View9")
+    Set myBlockDefinition = Part.SketchManager.MakeSketchBlockFromFile( _
+        Nothing, "C:\PDM\ArrayVault1\Standards\Templates\Blocks\Side View Label.SLDBLK", _
+        False, 1, 0)
+    
+    '=============================
+    ' Insert Isometric View Label
+    '=============================
+    boolstatus = Part.ActivateView("Drawing View10")
+    Set myBlockDefinition = Part.SketchManager.MakeSketchBlockFromFile( _
+        Nothing, "C:\PDM\ArrayVault1\Standards\Templates\Blocks\Isometric View Label.SLDBLK", _
+        False, 1, 0)
+    
+    MsgBox "All labels inserted successfully."
+
+End Sub
+
+
